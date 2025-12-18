@@ -1,4 +1,4 @@
-# task.runner
+# edge.runner
 
 To install dependencies:
 
