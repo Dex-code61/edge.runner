@@ -24,9 +24,10 @@ const cmds: EdgeCmd<"cmd">[] = [
 ];
 
 
-const fetchTodo = () => fetch("https://jsonplaceholder.typicode.com/todos/1")
+const fetchTodo = () =>  fetch("https://jsonplaceholder.typicode.com/todos/1")
     .then(r => r.json())
     .then(v => console.log(`Todo retrieved successfull: ${(v as { title: string; }).title}`))
+
 
 
 const funcCmds: EdgeCmd<"func">[] = [ {
@@ -34,11 +35,13 @@ const funcCmds: EdgeCmd<"func">[] = [ {
     type: "func",
     key: "fetch todo",
     deps: ["dep"]
-}, {
+},
+ {
     action: () => console.log("Dep command..."),
     type: "func",
     key: "dep",
-}]
+}
+]
 
 
 async function addTask() {

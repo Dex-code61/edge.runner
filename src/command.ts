@@ -33,37 +33,7 @@ export class EdgeCommand {
     execCommand(c: EdgeCode, k: EdgeCmd["key"]) {
         const p = this.executionQueue.then(async () => {
             try {
-                const cmd = this.storage.getCommand(c, k)
-
-                if(cmd?.deps) {
-                    for (const depQ of cmd.deps){
-                        this.execCommand(c, depQ)
-                    }
-                }
-
-                switch (cmd.type) {
-                    case "cmd": {
-                        const cmdCommand = cmd as EdgeCmd<"cmd">
-
-                        if(typeof cmdCommand.action !== "string") {
-                            throw new EdgeError(balk.red("cmd Action must be a string"))
-                        }
-
-                        await this.cli.runCmdStream(cmdCommand.action, (chunk) => {
-                            console.log(chunk);
-                        })
-                        break;
-                    }
-                    case "func":
-                        const funcCommand = cmd as EdgeCmd<"func">
-                        if(typeof funcCommand.action !== "function") {
-                            throw new EdgeError(balk.red("func Action must be a function"))
-                        }
-                        funcCommand.action()
-                        break
-                    default:
-                        break;
-                }
+                await this.executeCommandWithDeps(c, k)
             } catch (e) {
                 console.log(e);
                 throw new EdgeError(balk.red(e instanceof EdgeError ? e.msg : e instanceof Error ? e.message : "Unknown error occured"))
@@ -71,6 +41,51 @@ export class EdgeCommand {
         })
         this.executionQueue = p
         return p
+    }
+
+    private async executeCommandWithDeps(c: EdgeCode, k: EdgeCmd["key"], visited = new Set<string>()) {
+
+        if (visited.has(k)) {
+            throw new EdgeError(balk.red(`Circular dependency detected: ${k}`))
+        }
+        visited.add(k)
+
+        const cmd = this.storage.getCommand(c, k)
+        if (!cmd) {
+            throw new EdgeError(balk.red(`Command not found: ${k}`))
+        }
+
+        if (cmd.deps) {
+            for (const depKey of cmd.deps) {
+                await this.executeCommandWithDeps(c, depKey, visited)
+            }
+        }
+
+        await this.executeCommandLogic(cmd)
+    }
+
+    private async executeCommandLogic(cmd: EdgeCmd) {
+        switch (cmd.type) {
+            case "cmd": {
+                const cmdCommand = cmd as EdgeCmd<"cmd">
+                if (typeof cmdCommand.action !== "string") {
+                    throw new EdgeError(balk.red("cmd Action must be a string"))
+                }
+                await this.cli.runCmdStream(cmdCommand.action, (chunk) => {
+                    console.log(chunk);
+                })
+                break;
+            }
+            case "func":
+                const funcCommand = cmd as EdgeCmd<"func">
+                if (typeof funcCommand.action !== "function") {
+                    throw new EdgeError(balk.red("func Action must be a function"))
+                }
+                await funcCommand.action()
+                break
+            default:
+                break;
+        }
     }
 
 
