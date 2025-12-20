@@ -1,3 +1,4 @@
+import balk from "balk";
 import { EdgeError } from "./errors";
 import { TaskSchema } from "./schema";
 import type { EdgeCmd, EdgeCode, EdgeTask } from "./types";
@@ -23,17 +24,26 @@ export class EdgeStorage {
         }, 10000);
     }
 
-    newTask(id: EdgeCode, t: Pick<EdgeTask, "name" | "cmds" | "query">) {
+    newTask(id: EdgeCode, t: Pick<EdgeTask, "name" | "cmds" | "query" | "deps">) {
         const isSafe = TaskSchema.safeParse(t)
 
         if(!isSafe.success) {
-            throw new EdgeError(isSafe?.error?.name)
+            throw new EdgeError(balk.red(isSafe?.error?.name))
         }
+
+        const findTask = this.getTask(isSafe.data.query)
+
+        if(findTask){
+            throw new EdgeError(balk.red(`Task with the same query name already exists: ${t.query}`))
+        }
+
+
         const newT: EdgeTask = {
             id,
             name: t.name,
             cmds: t.cmds,
             query: t.query,
+            deps: t.deps,
             createdAt: new Date(Date.now()).toDateString(),
             updatedAt: new Date(Date.now()).toDateString(),
             isDeleted: false,
@@ -46,7 +56,7 @@ export class EdgeStorage {
     newCommand(c: EdgeCode, cmd: EdgeCmd) {
         const task = this.tasks.get(c)
         if (!task) {
-            throw new EdgeError("Task not found at new command " + c)
+            throw new EdgeError(balk.red("Task not found at new command " + c))
         }
 
         task.cmds.push(cmd)
@@ -54,24 +64,31 @@ export class EdgeStorage {
         this.tasks.set(c, task)
     }
 
-    async getTask(c: EdgeCode) {
-        const task = this.tasks.get(c)
+    // async getTaskAsync(c: EdgeCode) {
+    //     const task = this.tasks.get(c)
+    //     if (!task) {
+    //         return null
+    //     }
+    //     return task
+    // }
 
+    getTask(c: EdgeCode) {
+        const task = this.tasks.get(c)
         if (!task) {
-            throw new EdgeError("Task not found at get task " + c)
+            return null
         }
         return task
     }
 
-    async getCommand(c: EdgeCode, k: EdgeCmd["key"]) {
+    getCommand(c: EdgeCode, k: EdgeCmd["key"]) {
         const task = this.tasks.get(c)
         if (!task) {
-            throw new EdgeError("Task not found at get command " + c)
+            throw new EdgeError(balk.red("Task not found at get command " + c))
         }
 
         const foundCmd = task.cmds.find(cmd => cmd.key === k)
         if (!foundCmd) {
-            throw new EdgeError(`Command with key ${k}, was not founded`)
+            throw new EdgeError(balk.red(`Command with key ${k}, was not founded`))
         }
 
         return foundCmd
@@ -94,7 +111,7 @@ export class EdgeStorage {
     deleteTask(c: EdgeCode) {
         const task = this.tasks.get(c)
         if (!task) {
-            throw new EdgeError("Task not found at delete task " + c)
+            throw new EdgeError(balk.red("Task not found at delete task " + c))
         }
 
         // task.isDeleted = true

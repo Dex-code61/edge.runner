@@ -1,9 +1,7 @@
 import { Edge } from "./src/edge";
 import type { EdgeCmd } from "./src/types";
 
-
 const edge = new Edge()
-
 
 const cmds: EdgeCmd<"cmd">[] = [
     {
@@ -23,11 +21,11 @@ const cmds: EdgeCmd<"cmd">[] = [
     }
 ];
 
-
-async function addTask() {
-    edge.newTask({
+function addTask() {
+    edge.newTask({  
         name: "Deployment",
         cmds,
+        deps: [],
         query: "deploy"
     }).exec()
 

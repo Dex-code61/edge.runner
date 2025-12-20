@@ -1,3 +1,4 @@
+import balk from "balk";
 import { EdgeCli } from "./cli";
 import { EdgeError } from "./errors";
 import { EdgeStorage } from "./storage";
@@ -32,25 +33,40 @@ export class EdgeCommand {
     execCommand(c: EdgeCode, k: EdgeCmd["key"]) {
         const p = this.executionQueue.then(async () => {
             try {
-                const cmd = await this.storage.getCommand(c, k)
+                const cmd = this.storage.getCommand(c, k)
+
+                if(cmd?.deps) {
+                    for (const depQ of cmd.deps){
+                        this.execCommand(c, depQ)
+                    }
+                }
 
                 switch (cmd.type) {
                     case "cmd": {
                         const cmdCommand = cmd as EdgeCmd<"cmd">
-                        const r = await this.cli.runCmdStream(cmdCommand.action, (chunk) => {
+
+                        if(typeof cmdCommand.action !== "string") {
+                            throw new EdgeError(balk.red("cmd Action must be a string"))
+                        }
+
+                        await this.cli.runCmdStream(cmdCommand.action, (chunk) => {
                             console.log(chunk);
                         })
-                        // console.log(r);
                         break;
                     }
                     case "func":
+                        const funcCommand = cmd as EdgeCmd<"func">
+                        if(typeof funcCommand.action !== "function") {
+                            throw new EdgeError(balk.red("func Action must be a function"))
+                        }
+                        funcCommand.action()
                         break
                     default:
                         break;
                 }
             } catch (e) {
                 console.log(e);
-                throw new EdgeError(e instanceof EdgeError ? e.msg : e instanceof Error ? e.message : "Unknown error occured")
+                throw new EdgeError(balk.red(e instanceof EdgeError ? e.msg : e instanceof Error ? e.message : "Unknown error occured"))
             }
         })
         this.executionQueue = p

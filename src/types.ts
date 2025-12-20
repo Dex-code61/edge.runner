@@ -4,6 +4,7 @@ export interface EdgeTask {
     query: string;
     name: string;
     cmds: EdgeCmd[];
+    deps?: EdgeTask["query"][]; 
     createdAt: string;
     updatedAt: string;
     isDeleted: boolean
@@ -12,13 +13,12 @@ export interface EdgeTask {
 
 export type EdgeCode = string
 
-export type EdgeCmdType = "file" | "cmd" | "func"
+export type EdgeCmdType = "cmd" | "func"
 
 
 
 export interface EdgeCmdActions {
-    "func": (<T = any, K = any>(i?: T) => Promise<K>);
-    "file": string;
+    "func": () => void | Promise<void>;
     "cmd": string;
 }
 

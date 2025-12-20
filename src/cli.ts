@@ -1,3 +1,4 @@
+import balk from "balk";
 import { EdgeError } from "./errors";
 
 
@@ -5,19 +6,20 @@ export class EdgeCli {
 
     constructor() { }
 
-
     async runCmd(cmd: string) {
         const proc = Bun.spawn(["powershell.exe", "-Command", cmd], {
             stdout: "pipe",
             stderr: "pipe",
         });
 
+        
+
         const output = await new Response(proc.stdout).text();
         const error = await new Response(proc.stderr).text();
         await proc.exited;
 
         if (error) {
-            throw new EdgeError(error)
+            throw new EdgeError(balk.red(error))
         }
 
         return output;
@@ -50,7 +52,7 @@ export class EdgeCli {
         await proc.exited;
 
         if (error) {
-            throw new EdgeError(error);
+            throw new EdgeError(balk.red(error));
         }
 
         return fullOutput;
